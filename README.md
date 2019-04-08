@@ -16,7 +16,9 @@ output:
 ---
 
 ```{r setup, include=FALSE}
+{set.seed(333)}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache = TRUE)
 ```
 
 ## R Markdown
@@ -27,6 +29,8 @@ When you click the **Knit** button a document will be generated that includes bo
 
 
 ```{r}
+library(bitops)
+library(RCurl)
 library(randomForest)
 library(e1071)
 library(caret)
@@ -50,11 +54,14 @@ library(class)
 library(gmodels)
 library(MASS)
 library(Hmisc)
+library(SuperLearner)
 ```
 
 Data Prep
 ```{r} 
-data <- read.csv(file = "D:/Chrome Downloads/Capstone Project/datasets/MSFT.csv")
+#from personal pc data<- read.csv(file = "D:/Chrome Downloads/Capstone Project/datasets/MSFT.csv")
+
+data <- read.csv(text=getURL("https://raw.githubusercontent.com/derekkim90/stock-market-project/master/MSFT.csv"))
 msft<- data.frame(data)
 sum(is.na(msft))
 
@@ -66,7 +73,7 @@ str(msft)
 sma<-SMA(msft$Adj.Close, n = 14)
 
 
-#exponential moving average is a type of moving average where weights, ?? i , of past prices decrease exponentially:
+#exponential moving average is a type of moving average where weights of past prices decrease exponentially:
 ema<-EMA(msft$Adj.Close, n = 14, wilder = FALSE)
 
 
@@ -74,7 +81,7 @@ ema<-EMA(msft$Adj.Close, n = 14, wilder = FALSE)
 atr <- ATR(msft[,c("High","Low","Adj.Close")], n=14) 
 
 
-# Average directional movement index indicates the strength of a trend in price time series. It is a combination of the negative and positive directional movements indicators, DI + n and DI ???n , computed over a period of n past days corresponding to the input window length
+# Average directional movement index indicates the strength of a trend in price time series. It is a combination of the negative and positive directional movements indicators, DI + n and DIn , computed over a period of n past days corresponding to the input window length
 adx<- ADX(msft[,c("High","Low","Adj.Close")], n=14) 
 
 
@@ -266,14 +273,11 @@ indep1$Date<-as.numeric(as.factor(indep1$Date))
 adjust$Date<-as.numeric(as.factor(adjust$Date))
 auto1<-AutoSpearman(dataset = adjust, metrics=colnames(indep1))
 auto1
-
-
-
 ```
 
 ```{r}
 #                     Random Forest with Outliers Removed
-set.seed(123)
+
 trainindex<-createDataPartition(removed$Grade, p=0.85, list= FALSE)
 training<-removed[trainindex,]
 test<-removed[-trainindex,]
@@ -294,14 +298,21 @@ predictdata<-predict(modeldata, test)
 predictdatagr<- predict(modeldatagr, test)
 predictauto<- predict(modelauto, test)
 
-confusionMatrix(predictdata,as.factor(test$Grade))
-confusionMatrix(predictdatagr,as.factor(test$Grade))
-confusionMatrix(predictauto, as.factor(test$Grade))
-### plot the Kappa curve
+b1<-confusionMatrix(predictdata,as.factor(test$Grade))
+b2<-confusionMatrix(predictdatagr,as.factor(test$Grade))
+b3<-confusionMatrix(predictauto, as.factor(test$Grade))
 
-plot(modeldata, metric = "Kappa")
-plot(modeldatagr, metric = "Kappa")
-plot(modelauto, metric = "Kappa")
+as.table(b1)
+as.matrix(b1, what="overall")
+as.matrix(b1, what= "classes")
+
+as.table(b2)
+as.matrix(b2, what="overall")
+as.matrix(b2, what= "classes")
+
+as.table(b3)
+as.matrix(b3, what="overall")
+as.matrix(b3, what= "classes")
 ```
 Grade ~ cci + sma + ema + DIp + Close + Adj.Close
 <environment: 0x0000000014971710>
@@ -310,10 +321,8 @@ Grade ~ sma + Date + ema + trueHigh + High + trueLow
 [1] "DIn"    "DX"     "ADX"    "cci"    "fastK"  "Volume"
 [1] "tr"     "DX"     "ADX"    "cci"    "fastK"  "Volume"
 ```{r}
-
-
 #                     Random Forest with Outliers Adjusted
-set.seed(1231)
+
 trainindex2<-createDataPartition(adjust$Grade, p=0.85, list= FALSE)
 
 training2<-adjust[trainindex2,]
@@ -335,13 +344,22 @@ predictdata2<-predict(modeldata2, test2)
 predictdata2gr<-predict(modeldata2gr,test2)
 predictauto2<-predict(modelauto2, test2)
 
-confusionMatrix(predictdata2,as.factor(test2$Grade))
-confusionMatrix(predictdata2gr,as.factor(test2$Grade))
-confusionMatrix(predictauto2, as.factor(test2$Grade))
+a1<-confusionMatrix(predictdata2,as.factor(test2$Grade))
+a2<-confusionMatrix(predictdata2gr,as.factor(test2$Grade))
+a3<-confusionMatrix(predictauto2, as.factor(test2$Grade))
 
-plot(modeldata2, metric = "Kappa")
-plot(modeldata2gr, metric = "Kappa")
-plot(modelauto2, metric = "Kappa")
+as.table(a1)
+as.matrix(a1, what="overall")
+as.matrix(a1, what= "classes")
+
+as.table(a2)
+as.matrix(a2, what="overall")
+as.matrix(a2, what= "classes")
+
+as.table(a3)
+as.matrix(a3, what="overall")
+as.matrix(a3, what= "classes")
+
 
 ```
 
@@ -363,9 +381,23 @@ predssvm <- predict(modelsvm,Testsvm)
 predssvmgr<-predict(modelsvmgr, Testsvm)
 predsauto <- predict(modelautofeat, Testsvm)
 
-confusionMatrix(predssvm, as.factor(Testsvm$Grade))
-confusionMatrix(predssvmgr, as.factor(Testsvm$Grade))
-confusionMatrix(predsauto, as.factor(Testsvm$Grade))
+c1<-confusionMatrix(predssvm, as.factor(Testsvm$Grade))
+c2<-confusionMatrix(predssvmgr, as.factor(Testsvm$Grade))
+c3<-confusionMatrix(predsauto, as.factor(Testsvm$Grade))
+
+
+as.table(c1)
+as.matrix(c1, what="overall")
+as.matrix(c1, what= "classes")
+
+as.table(c2)
+as.matrix(c2, what="overall")
+as.matrix(c2, what= "classes")
+
+as.table(c3)
+as.matrix(c3, what="overall")
+as.matrix(c3, what= "classes")
+
 
 ```
 
@@ -385,35 +417,67 @@ preds2svm <- predict(model2svm,Testsvm2)
 preds2svmgr<-predict(model2svmgr, Testsvm2)
 predsauto2svm<- predict(model2svmauto, Testsvm2)
 
-confusionMatrix(preds2svm, as.factor(Testsvm2$Grade))
-confusionMatrix(preds2svmgr, as.factor(Testsvm2$Grade))
-confusionMatrix(predsauto2svm, as.factor(Testsvm2$Grade))
+d1<-confusionMatrix(preds2svm, as.factor(Testsvm2$Grade))
+d2<-confusionMatrix(preds2svmgr, as.factor(Testsvm2$Grade))
+d3<-confusionMatrix(predsauto2svm, as.factor(Testsvm2$Grade))
 
+as.table(d1)
+as.matrix(d1, what="overall")
+as.matrix(d1, what= "classes")
+
+as.table(d2)
+as.matrix(d2, what="overall")
+as.matrix(d2, what= "classes")
+
+as.table(d3)
+as.matrix(d3, what="overall")
+as.matrix(d3, what= "classes")
 
 ```
 
 ```{r}
 #Ordinal Regression without Outliers
-regdata<-removed
+regdata<-training
+regtestdata<-test
 regdata$Grade<-as.factor(regdata$Grade)
+regtestdata$Grade<- as.factor(regtestdata$Grade)
 
-linreg<-polr(Grade~., data=regdata, Hess= TRUE)#problem
+reg<-polr(Grade~sma+ema+tr+atr+trueHigh+DIp+DIn+DX+ADX+cci+roc+rsi+wpr+fastD+slowD+Date+Open+High+Low+Close+Adj.Close+Volume, data=regdata, Hess= TRUE)
+predall<-predict(reg, regtestdata)
+confusionMatrix(predall, regtestdata$Grade)
+
 tgr<-polr(Grade~Date+cci+sma+ema+DIp+Close, data=regdata, Hess= TRUE)
-tauto<-polr(Grade~DIn+DX+ADX+cci+fastK+Volume, data=regdata, Hess= TRUE)
+predtgr<-predict(tgr, test)
+confusionMatrix(predtgr, regtestdata$Grade)
 
-#Ordinal Regression with Outliers
-regdata2<-adjust
+tauto<-polr(Grade~DIn+DX+ADX+cci+fastK+Volume, data=regdata, Hess= TRUE)
+predtauto<-predict(tauto, regtestdata)
+confusionMatrix(predtauto, regtestdata$Grade)
+
+#Ordinal Regression with Outliers adjusted
+regdata2<-training2
+regtestdata2<-test2
 regdata2$Grade<-as.factor(regdata2$Grade)
-linreg1<-polr(Grade~., data=regdata2, Hess= TRUE)#problem
-ugr<- polr(Grade~Date+sma+ema+trueHigh+High+trueLow, data=regdata2, Hess= TRUE)#problem
+regtestdata2$Grade<-as.factor(regtestdata2$Grade)
+
+reg1<-polr(Grade~sma+ema+tr+atr+trueHigh+DIp+DIn+DX+ADX+cci+roc+rsi+wpr+fastD+slowD+Date+Open+High+Low+Close+Adj.Close+Volume, data=regdata2, Hess= TRUE)
+predall1<-predict(reg1, regtestdata2)
+confusionMatrix(predall1, regtestdata2$Grade)
+
+ugr<- polr(Grade~Date+sma+ema+trueHigh+High+trueLow, data=regdata2, Hess= TRUE)
+predugr<-predict(ugr, regtestdata2)
+confusionMatrix(predugr, regtestdata2$Grade)
+
 uauto1<-polr(Grade~tr+DX+ADX+cci+fastK+Volume, data=regdata2, Hess= TRUE)
+preduauto1<-predict(uauto1, regtestdata2)
+confusionMatrix(preduauto1, regtestdata2$Grade)
+
 
 
 ```
 
 ```{r}
 #knn without outliers
-
 set.seed(100)
 normalize <- function(x) {
 return ((x - min(x)) / (max(x) - min(x))) }
@@ -428,81 +492,87 @@ prc_test <- prc_n[1832:2289,]
 prc_train_labels <- removed[1:1831, 25]
 prc_test_labels <- removed[1832:2289, 25]
 
-prc_test_pred5 <- knn(train = prc_train, test = prc_test, cl = prc_train_labels, k=5)
-prc_test_pred7 <- knn(train = prc_train, test = prc_test, cl = prc_train_labels, k=7)
-prc_test_pred10 <- knn(train = prc_train, test = prc_test, cl = prc_train_labels, k=10)
+#determine optimal k neighbours for each condition
+knumber<-train(Grade ~ ., data = training, method = "knn", trControl = traindata, preProcess = c("center","scale"),tuneLength = 20)
+knumber#k=27
+plot(knumber)
 
+knumbergr<-train(Grade ~ Date + cci + sma + ema + DIp + Close, data = training, method = "knn", trControl = traindata, preProcess = c("center","scale"),tuneLength = 20)
+knumbergr #k=43
+plot(knumbergr)
 
-CrossTable(x= prc_test_labels, y=prc_test_pred5, prop.chisq=FALSE)
-CrossTable(x= prc_test_labels, y=prc_test_pred7, prop.chisq=FALSE)
-CrossTable(x= prc_test_labels, y=prc_test_pred10, prop.chisq=FALSE)
+knumberauto<- train(Grade ~Date + sma + ema + trueHigh + High + trueLow, data = training, method = "knn", trControl = traindata, preProcess = c("center","scale"),tuneLength = 20) 
+knumberauto #k=19
+plot(knumber)
+
+prc_test_pred1 <- knn(train = prc_train, test = prc_test, cl = prc_train_labels, k=25)
+
+CrossTable(x= prc_test_labels, y=prc_test_pred1, prop.chisq=FALSE)
 
 #knn without outliers with features selected via gain ratio
 prc_traingr<- prc_n[1:1831,c(1,2,7,11,18,22)]
 prc_testgr<- prc_n[1832:2289,c(1,2,7,11,18,22)]
 
-prc_test_predgr5 <- knn(train = prc_traingr, test = prc_testgr, cl = prc_train_labels, k=5)
-prc_test_predgr7 <- knn(train = prc_traingr, test = prc_testgr, cl = prc_train_labels, k=7)
-prc_test_predgr10 <- knn(train = prc_traingr, test = prc_testgr, cl = prc_train_labels, k=10)
+prc_test_predgr1 <- knn(train = prc_traingr, test = prc_testgr, cl = prc_train_labels, k=39)
 
-CrossTable(x= prc_test_labels, y=prc_test_predgr5, prop.chisq=FALSE)
-CrossTable(x= prc_test_labels, y=prc_test_predgr7, prop.chisq=FALSE)
-CrossTable(x= prc_test_labels, y=prc_test_predgr10, prop.chisq=FALSE)
+CrossTable(x= prc_test_labels, y=prc_test_predgr1, prop.chisq=FALSE)
 
 #knn without outliers with features via AutoSpearman
 prc_trainas<- prc_n[1:1831,c(8:11,15,24)]
 prc_testas<- prc_n[1832:2289,c(8:11,15,24)]
 
-prc_test_predas5 <- knn(train = prc_trainas, test = prc_testas, cl = prc_train_labels, k=5)
-prc_test_predas7 <- knn(train = prc_trainas, test = prc_testas, cl = prc_train_labels, k=7)
-prc_test_predas10 <- knn(train = prc_trainas, test = prc_testas, cl = prc_train_labels, k=10)
+prc_test_predas1 <- knn(train = prc_trainas, test = prc_testas, cl = prc_train_labels, k=21)
 
-CrossTable(x= prc_test_labels, y=prc_test_predas5, prop.chisq=FALSE)
-CrossTable(x= prc_test_labels, y=prc_test_predas7, prop.chisq=FALSE)
-CrossTable(x= prc_test_labels, y=prc_test_predas10, prop.chisq=FALSE)
 
+CrossTable(x= prc_test_labels, y=prc_test_predas1, prop.chisq=FALSE)
+
+```
+
+```{r}
 #knn with outliers adjusted
+set.seed(101)
 prc_a <- as.data.frame(lapply(adjust[1:length(adjust)-1], normalize))
 nrow(adjust)
 print(2517*0.8)
 
 prca_train <- prc_a[1:2014,]
-prca_test <- prc_a[2105:2517,]
+prca_test <- prc_a[2015:2517,]
 
 prca_train_labels <- adjust[1:2014, 25]
-prca_test_labels <- adjust[2105:2517, 25]
+prca_test_labels <- adjust[2015:2517, 25]
 
-prca_test_pred5 <- knn(train = prca_train, test = prca_test, cl = prca_train_labels, k=5)
-prca_test_pred7 <- knn(train = prca_train, test = prca_test, cl = prca_train_labels, k=7)
-prca_test_pred10 <- knn(train = prca_train, test = prca_test, cl = prca_train_labels, k=10)
+knumber1<-train(Grade ~ ., data = training2, method = "knn", trControl = traindata2, preProcess = c("center","scale"),tuneLength = 20)
+knumber1#k=25
+plot(knumber1)
 
+knumbergr1<-train(Grade ~ Date + cci + sma + ema + DIp + Close, data = training2, method = "knn", trControl = traindata2, preProcess = c("center","scale"),tuneLength = 20)
+knumbergr1 #k=27
+plot(knumbergr1)
 
-CrossTable(x= prca_test_labels, y=prca_test_pred5, prop.chisq=FALSE)
-CrossTable(x= prca_test_labels, y=prca_test_pred7, prop.chisq=FALSE)
-CrossTable(x= prca_test_labels, y=prca_test_pred10, prop.chisq=FALSE)
+knumberauto1<- train(Grade ~Date + sma + ema + trueHigh + High + trueLow, data = training2, method = "knn", trControl = traindata2, preProcess = c("center","scale"),tuneLength = 20) 
+knumberauto1 #k=23
+plot(knumberauto1)
+
+prca_test_pred2 <- knn(train = prca_train, test = prca_test, cl = prca_train_labels, k=25)
+
+CrossTable(x=prca_test_labels, y=prca_test_pred2, prop.chisq=FALSE)
 
 #knn with outliers with features selected via gain ratio
-prc_traingr2<- prc_n[1:1831,c(1,2,5,6,18,20)]
-prc_testgr2<- prc_n[1832:2289,c(1,2,5,6,18,20)]
+prca_traingr2<- prc_a[1:2014,c(1,2,5,6,18,20)]
+prca_testgr2<- prc_a[2015:2517,c(1,2,5,6,18,20)]
 
+prca_test_predgr2 <- knn(train = prca_traingr2, test = prca_testgr2, cl = prca_train_labels, k=27)
 
-prc_test_predgr25 <- knn(train = prc_traingr, test = prc_testgr, cl = prc_train_labels, k=5)
-prc_test_predgr27 <- knn(train = prc_traingr, test = prc_testgr, cl = prc_train_labels, k=7)
-prc_test_predgr210 <- knn(train = prc_traingr, test = prc_testgr, cl = prc_train_labels, k=10)
-
-CrossTable(x= prc_test_labels, y=prc_test_predgr25, prop.chisq=FALSE)
-CrossTable(x= prc_test_labels, y=prc_test_predgr27, prop.chisq=FALSE)
-CrossTable(x= prc_test_labels, y=prc_test_predgr210, prop.chisq=FALSE)
+CrossTable(x= prca_test_labels, y=prca_test_predgr2, prop.chisq=FALSE)
 
 #knn with outliers with features via AutoSpearman
-prc_train2as<- prc_n[1:1831,c(3,9,10,11,15,24)]
-prc_test2as<- prc_n[1832:2289,c(3,9,10,11,15,24)]
+prca_train2as<- prc_a[1:2014,c(3,9,10,11,15,24)]
+prca_test2as<- prc_a[2015:2517,c(3,9,10,11,15,24)]
 
-prc_test_pred2as5 <- knn(train = prc_train2as, test = prc_test2as, cl = prc_train_labels, k=5)
-prc_test_pred2as7 <- knn(train = prc_train2as, test = prc_test2as, cl = prc_train_labels, k=7)
-prc_test_pred2as10 <- knn(train = prc_train2as, test = prc_test2as, cl = prc_train_labels, k=10)
+prca_test_predas2 <- knn(train = prca_train2as, test = prca_test2as, cl = prca_train_labels, k=23)
 
-CrossTable(x= prc_test_labels, y=prc_test_pred2as5, prop.chisq=FALSE)
-CrossTable(x= prc_test_labels, y=prc_test_pred2as7, prop.chisq=FALSE)
-CrossTable(x= prc_test_labels, y=prc_test_pred2as10, prop.chisq=FALSE)
+
+CrossTable(x=prca_test_labels, y=prca_test_predas2, prop.chisq=FALSE)
+```
+
 
