@@ -192,7 +192,7 @@ y$Grade [y$move>=b & y$move<0] <- "Down"
 y$Grade [y$move==0] <- "No Move"
 y$Grade [y$move>0 & y$move<=c] <- "Up"
 y$Grade [y$move>c & y$move<=d] <- "Very High"
-y
+
 
 # CONVERT OUTLIERS TO MIN/MAX range
 data.out<-x
@@ -214,8 +214,7 @@ data.out$Grade [data.out$move==0] <- "No Move"
 data.out$Grade [data.out$move>0 & data.out$move<=g] <- "Up"
 data.out$Grade [data.out$move>g & data.out$move<=h] <- "Very High"
 
-data.out
-
+print(c(a,b,c,d,e,f,g,h))
 ```
 
 ```{r}
@@ -245,16 +244,16 @@ removed$Date<-as.factor(removed$Date)
 removed$move<-NULL
 weight<- gain.ratio(Grade~., removed)
 subset <- cutoff.k(weight, 6)
-f <- as.simple.formula(subset, "Grade")
-
+subgr <- as.simple.formula(subset, "Grade")
+subgr
 #Gain ratio on 'Grade' with adjusted outlier values
 adjust<-data.out
 adjust$Date<-as.factor(adjust$Date)
 adjust$move<-NULL
 weight2<- gain.ratio(Grade~., adjust)
 subset <- cutoff.k(weight2, 6)
-g <- as.simple.formula(subset, "Grade")
-print(g)
+subgr1 <- as.simple.formula(subset, "Grade")
+subgr1
 
 #Feature selection using AutoSpearman with Outliers removed
 indep<-removed
@@ -410,7 +409,7 @@ Trainsvm2$Grade<-as.factor(Trainsvm2$Grade)
 
 # create model
 model2svm <- svm(Grade~., data=Trainsvm2, kernel='polynomial')#all features
-model2svmgr<-svm(Grade~sma+ema+trueHigh+High+trueLow, data=Trainsvm2, kernel='polynomial')
+model2svmgr<-svm(Grade~sma+ema+trueHigh+High+trueLow, data=Trainsvm2, kernel='polynomial') #features from gain ratio
 model2svmauto <-svm(Grade~tr+DX+ADX+cci+Volume, data=Trainsvm2, kernel='polynomial') #feature selection based on AutoSpearman
 #Predict Output
 preds2svm <- predict(model2svm,Testsvm2)
@@ -444,15 +443,24 @@ regtestdata$Grade<- as.factor(regtestdata$Grade)
 
 reg<-polr(Grade~sma+ema+tr+atr+trueHigh+DIp+DIn+DX+ADX+cci+roc+rsi+wpr+fastD+slowD+Date+Open+High+Low+Close+Adj.Close+Volume, data=regdata, Hess= TRUE)
 predall<-predict(reg, regtestdata)
-confusionMatrix(predall, regtestdata$Grade)
+o1<-confusionMatrix(predall, regtestdata$Grade)
+as.table(o1)
+as.matrix(o1, what="overall")
+as.matrix(o1, what= "classes")
 
 tgr<-polr(Grade~Date+cci+sma+ema+DIp+Close, data=regdata, Hess= TRUE)
 predtgr<-predict(tgr, test)
-confusionMatrix(predtgr, regtestdata$Grade)
+o2<-confusionMatrix(predtgr, regtestdata$Grade)
+as.table(o2)
+as.matrix(o2, what="overall")
+as.matrix(o2, what= "classes")
 
 tauto<-polr(Grade~DIn+DX+ADX+cci+fastK+Volume, data=regdata, Hess= TRUE)
 predtauto<-predict(tauto, regtestdata)
-confusionMatrix(predtauto, regtestdata$Grade)
+o3<-confusionMatrix(predtauto, regtestdata$Grade)
+as.table(o3)
+as.matrix(o3, what="overall")
+as.matrix(o3, what= "classes")
 
 #Ordinal Regression with Outliers adjusted
 regdata2<-training2
@@ -462,16 +470,24 @@ regtestdata2$Grade<-as.factor(regtestdata2$Grade)
 
 reg1<-polr(Grade~sma+ema+tr+atr+trueHigh+DIp+DIn+DX+ADX+cci+roc+rsi+wpr+fastD+slowD+Date+Open+High+Low+Close+Adj.Close+Volume, data=regdata2, Hess= TRUE)
 predall1<-predict(reg1, regtestdata2)
-confusionMatrix(predall1, regtestdata2$Grade)
+o4<-confusionMatrix(predall1, regtestdata2$Grade)
+as.table(o4)
+as.matrix(o4, what="overall")
+as.matrix(o4, what= "classes")
 
 ugr<- polr(Grade~Date+sma+ema+trueHigh+High+trueLow, data=regdata2, Hess= TRUE)
 predugr<-predict(ugr, regtestdata2)
-confusionMatrix(predugr, regtestdata2$Grade)
+o5<-confusionMatrix(predugr, regtestdata2$Grade)
+as.table(o5)
+as.matrix(o5, what="overall")
+as.matrix(o5, what= "classes")
 
 uauto1<-polr(Grade~tr+DX+ADX+cci+fastK+Volume, data=regdata2, Hess= TRUE)
 preduauto1<-predict(uauto1, regtestdata2)
-confusionMatrix(preduauto1, regtestdata2$Grade)
-
+o6<-confusionMatrix(preduauto1, regtestdata2$Grade)
+as.table(o6)
+as.matrix(o6, what="overall")
+as.matrix(o6, what= "classes")
 
 
 ```
@@ -507,15 +523,20 @@ plot(knumber)
 
 prc_test_pred1 <- knn(train = prc_train, test = prc_test, cl = prc_train_labels, k=25)
 
-CrossTable(x= prc_test_labels, y=prc_test_pred1, prop.chisq=FALSE)
-
+k1<-confusionMatrix(as.factor(prc_test_pred1), as.factor(prc_test_labels))
+as.table(k1)
+as.matrix(k1, what="overall")
+as.matrix(k1, what= "classes")
 #knn without outliers with features selected via gain ratio
 prc_traingr<- prc_n[1:1831,c(1,2,7,11,18,22)]
 prc_testgr<- prc_n[1832:2289,c(1,2,7,11,18,22)]
 
 prc_test_predgr1 <- knn(train = prc_traingr, test = prc_testgr, cl = prc_train_labels, k=39)
 
-CrossTable(x= prc_test_labels, y=prc_test_predgr1, prop.chisq=FALSE)
+k2<-confusionMatrix(as.factor(prc_test_predgr1), as.factor(prc_test_labels))
+as.table(k2)
+as.matrix(k2, what="overall")
+as.matrix(k2, what= "classes")
 
 #knn without outliers with features via AutoSpearman
 prc_trainas<- prc_n[1:1831,c(8:11,15,24)]
@@ -523,8 +544,10 @@ prc_testas<- prc_n[1832:2289,c(8:11,15,24)]
 
 prc_test_predas1 <- knn(train = prc_trainas, test = prc_testas, cl = prc_train_labels, k=21)
 
-
-CrossTable(x= prc_test_labels, y=prc_test_predas1, prop.chisq=FALSE)
+k3<-confusionMatrix(as.factor(prc_test_predas1), as.factor(prc_test_labels))
+as.table(k3)
+as.matrix(k3, what="overall")
+as.matrix(k3, what= "classes")
 
 ```
 
@@ -555,7 +578,10 @@ plot(knumberauto1)
 
 prca_test_pred2 <- knn(train = prca_train, test = prca_test, cl = prca_train_labels, k=25)
 
-CrossTable(x=prca_test_labels, y=prca_test_pred2, prop.chisq=FALSE)
+k4<-confusionMatrix(as.factor(prca_test_pred2), as.factor(prca_test_labels))
+as.table(k4)
+as.matrix(k4, what="overall")
+as.matrix(k4, what= "classes")
 
 #knn with outliers with features selected via gain ratio
 prca_traingr2<- prc_a[1:2014,c(1,2,5,6,18,20)]
@@ -563,7 +589,10 @@ prca_testgr2<- prc_a[2015:2517,c(1,2,5,6,18,20)]
 
 prca_test_predgr2 <- knn(train = prca_traingr2, test = prca_testgr2, cl = prca_train_labels, k=27)
 
-CrossTable(x= prca_test_labels, y=prca_test_predgr2, prop.chisq=FALSE)
+k5<-confusionMatrix(as.factor(prca_test_predgr2), as.factor(prca_test_labels))
+as.table(k5)
+as.matrix(k5, what="overall")
+as.matrix(k5, what= "classes")
 
 #knn with outliers with features via AutoSpearman
 prca_train2as<- prc_a[1:2014,c(3,9,10,11,15,24)]
@@ -572,7 +601,12 @@ prca_test2as<- prc_a[2015:2517,c(3,9,10,11,15,24)]
 prca_test_predas2 <- knn(train = prca_train2as, test = prca_test2as, cl = prca_train_labels, k=23)
 
 
-CrossTable(x=prca_test_labels, y=prca_test_predas2, prop.chisq=FALSE)
+k6<-confusionMatrix(as.factor(prca_test_predas2), as.factor(prca_test_labels))
+as.table(k6)
+as.matrix(k6, what="overall")
+as.matrix(k6, what= "classes")
 ```
+
+
 
 
